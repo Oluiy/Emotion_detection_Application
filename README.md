@@ -9,7 +9,7 @@ This README explains how to set up, run, and deploy the app that is included in 
 Project structure:
 
 ```
-AKINBOYEWA_23CG034029/
+EMOTION_DETECTOR/
 ├── app.py                        
 ├── model.py                     
 ├── simple_emotion_detector.py  
