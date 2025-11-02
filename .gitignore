@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+ENV
+env.bak
+venv.bak
+.env
+.DS_Store
+# Don't ignore database and uploads for this project
+*.db
+.git
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.idea
+.vscode
+uploads/
+*.log
+temp/
+test_*.py
+*_test.py
