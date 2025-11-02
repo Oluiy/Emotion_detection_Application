@@ -22,7 +22,7 @@ A simple, lightweight emotion detection web application using machine learning.
 ## 📁 Project Structure
 
 ```
-AKINBOYEWA_23CG034029/
+EMOTION_DETECTOR/
 ├── app.py                      # Main Flask application
 ├── model.py                    # Emotion detector wrapper
 ├── simple_emotion_detector.py  # ML model implementation

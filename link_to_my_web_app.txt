@@ -1,9 +1,0 @@
-Heroku - https://your-emotion-detector-app.herokuapp.com
-
-Note: Replace with your actual hosting platform and deployment link once deployed.
-Popular hosting options for Flask apps:
-- Heroku: https://heroku.com
-- Render: https://render.com  
-- Railway: https://railway.app
-- PythonAnywhere: https://pythonanywhere.com
-- Vercel: https://vercel.com

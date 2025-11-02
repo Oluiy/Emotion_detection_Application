@@ -310,7 +310,10 @@ class SimpleEmotionDetector:
     
     def save_model(self, model_path='models/simple_emotion_model.joblib'):
         """Save the trained model"""
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        # Only create directory if path has a directory component
+        model_dir = os.path.dirname(model_path)
+        if model_dir:  # Only if not empty string
+            os.makedirs(model_dir, exist_ok=True)
         
         model_data = {
             'model': self.model,
@@ -324,7 +327,12 @@ class SimpleEmotionDetector:
     def load_model(self, model_path='models/simple_emotion_model.joblib'):
         """Load a trained model"""
         try:
-            model_data = joblib.load(model_path)
+            import warnings
+            # Suppress sklearn version warnings temporarily
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model_data = joblib.load(model_path)
+            
             self.model = model_data['model']
             self.emotions = model_data['emotions']
             self.is_trained = model_data['is_trained']
@@ -332,6 +340,7 @@ class SimpleEmotionDetector:
             return True
         except Exception as e:
             print(f"❌ Failed to load model: {e}")
+            print("🔄 Will retrain model with current sklearn version...")
             return False
     
     def detect_faces(self, image):

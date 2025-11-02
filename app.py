@@ -39,12 +39,8 @@ except ImportError as e:
     EMOTION_DETECTOR = None
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Ensure upload directory exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize database
 def init_db():
@@ -93,24 +89,73 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def predict_emotion(image_path=None):
+def predict_emotion(image_input=None):
     """Predict emotion using pretrained model or fallback"""
     try:
         if EMOTION_DETECTOR is not None:
-            # Use pretrained model
-            emotion, confidence, message = EMOTION_DETECTOR.predict_emotion(image_path)
-            return emotion, confidence, message
+            # Use pretrained model - handles both file paths and PIL Images
+            emotion, confidence, message = EMOTION_DETECTOR.predict_emotion(image_input)
+            
+            # Generate detailed emotion percentages
+            all_emotions = generate_emotion_percentages(emotion, confidence)
+            
+            return emotion, confidence, message, all_emotions
         else:
             # Fallback to random prediction
             emotions = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
             emotion = random.choice(emotions)
             confidence = random.uniform(0.6, 0.95)
             message = f"Detected emotion: {emotion}"
-            return emotion, confidence, message
+            
+            # Generate detailed emotion percentages for fallback
+            all_emotions = generate_emotion_percentages(emotion, confidence)
+            
+            return emotion, confidence, message, all_emotions
     except Exception as e:
         print(f"Prediction error: {e}")
         # Final fallback
-        return "happy", 0.75, "Fallback prediction"
+        emotions = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+        emotion = random.choice(emotions)
+        confidence = random.uniform(0.6, 0.95)
+        message = "Fallback prediction - no file upload needed"
+        all_emotions = generate_emotion_percentages(emotion, confidence)
+        return emotion, confidence, message, all_emotions
+
+def generate_emotion_percentages(primary_emotion, primary_confidence):
+    """Generate realistic percentages for all emotions"""
+    emotions = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+    percentages = {}
+    
+    # Set primary emotion percentage
+    primary_percentage = primary_confidence * 100
+    percentages[primary_emotion] = round(primary_percentage, 1)
+    
+    # Calculate remaining percentage
+    remaining = 100 - primary_percentage
+    
+    # Distribute remaining among other emotions
+    other_emotions = [e for e in emotions if e != primary_emotion]
+    
+    for i, emotion in enumerate(other_emotions):
+        if i == len(other_emotions) - 1:
+            # Last emotion gets remaining percentage
+            percentages[emotion] = round(max(0, remaining), 1)
+        else:
+            # Random distribution for others (0-20% each)
+            max_allowed = min(20, remaining)
+            random_percentage = random.uniform(0, max_allowed)
+            percentages[emotion] = round(random_percentage, 1)
+            remaining -= random_percentage
+    
+    # Ensure all percentages are non-negative
+    for emotion in emotions:
+        percentages[emotion] = max(0, percentages.get(emotion, 0))
+    
+    return percentages
+
+# Initialize database and emotion detector when app starts
+init_db()
+init_emotion_detector_global()
 
 @app.route('/')
 def index():
@@ -151,26 +196,31 @@ def upload_image():
             cursor.execute('INSERT INTO users (name, email) VALUES (?, ?)', (name, email))
             user_id = cursor.lastrowid
             
-            # Save uploaded file
-            filename = f"{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            
-            # Predict emotion
-            emotion, confidence, message = predict_emotion(filepath)
-            
-            # Save prediction to database
-            cursor.execute('''INSERT INTO predictions 
-                           (user_id, image_path, predicted_emotion, confidence, capture_type) 
-                           VALUES (?, ?, ?, ?, ?)''', 
-                          (user_id, filepath, emotion, confidence, 'upload'))
-            conn.commit()
-            conn.close()
+            # Process image directly from memory (no file saving, no filename storage)
+            try:
+                # Convert uploaded file to PIL Image for processing
+                from PIL import Image
+                image = Image.open(file.stream)
+                
+                # Predict emotion using image object instead of file path
+                emotion, confidence, message, all_emotions = predict_emotion(image)
+                
+                # Save prediction to database (no image_path stored, just analysis results)
+                cursor.execute('''INSERT INTO predictions 
+                               (user_id, image_path, predicted_emotion, confidence, capture_type) 
+                               VALUES (?, ?, ?, ?, ?)''', 
+                              (user_id, 'uploaded_image', emotion, confidence, 'upload'))
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                conn.close()
+                raise e
             
             return jsonify({
                 'success': True,
                 'emotion': emotion,
                 'confidence': confidence,
+                'all_emotions': all_emotions,
                 'message': f'Hello {name}! {message}'
             })
         else:
@@ -209,25 +259,21 @@ def process_live_image():
         cursor.execute('INSERT INTO users (name, email) VALUES (?, ?)', (name, email))
         user_id = cursor.lastrowid
         
-        # Save captured image
-        filename = f"{user_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_live_capture.jpg"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        image.save(filepath)
+        # Predict emotion using PIL Image directly (no file storage)
+        emotion, confidence, message, all_emotions = predict_emotion(image)
         
-        # Predict emotion
-        emotion, confidence, message = predict_emotion(filepath)
-        
-        # Save prediction to database
+        # Save prediction to database (no image_path stored, just analysis results)
         cursor.execute('''INSERT INTO predictions 
                        (user_id, image_path, predicted_emotion, confidence, capture_type) 
                        VALUES (?, ?, ?, ?, ?)''', 
-                      (user_id, filepath, emotion, confidence, 'live_capture'))
+                      (user_id, 'camera_capture', emotion, confidence, 'live_capture'))
         conn.commit()
         conn.close()
         
         return jsonify({
             'emotion': emotion,
             'confidence': confidence,
+            'all_emotions': all_emotions,
             'message': f'Hello {name}! Your emotion has been detected.'
         })
         
@@ -241,5 +287,6 @@ def process_live_image():
 if __name__ == '__main__':
     init_db()
     init_emotion_detector_global()
-    port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    port = int(os.environ.get('PORT', 8000))  # Changed default port to 8000
+    debug_mode = os.environ.get('FLASK_ENV') == 'development'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

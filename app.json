@@ -1,0 +1,18 @@
+{
+  "name": "Emotion Detection AI",
+  "description": "AI-powered emotion detection from images using machine learning",
+  "repository": "https://github.com/Oluiy/Emotion_detection_Application",
+  "logo": "https://node-js-sample.herokuapp.com/node.png",
+  "keywords": ["python", "flask", "machine-learning", "emotion-detection", "ai"],
+  "image": "heroku/python",
+  "env": {
+    "SECRET_KEY": {
+      "description": "A secret key for verifying the integrity of signed cookies.",
+      "generator": "secret"
+    },
+    "FLASK_ENV": {
+      "description": "Flask environment",
+      "value": "production"
+    }
+  }
+}
