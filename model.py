@@ -25,21 +25,21 @@ class EmotionDetector:
     def init_model(self):
         """Initialize the emotion detection model"""
         try:
-            # First try to load your original trained model
-            original_model_path = 'emotion_mlp_model.pkl'
-            new_model_path = 'emotion_model.joblib'
+            # Try to load converted joblib model first
+            converted_model_path = 'emotion_mlp_model_converted.joblib'
+            default_model_path = 'emotion_model.joblib'
             
-            # Try to load existing model (check both paths)
-            if os.path.exists(original_model_path) and self.detector.load_model(original_model_path):
+            # Try to load existing model (prioritize converted model)
+            if os.path.exists(converted_model_path) and self.detector.load_model(converted_model_path):
                 self.model_loaded = True
-                print("✅ Loaded your original trained emotion model")
-            elif self.detector.load_model(new_model_path):
+                print("✅ Loaded converted MLPClassifier emotion model")
+            elif self.detector.load_model(default_model_path):
                 self.model_loaded = True
                 print("✅ Loaded improved emotion model")
             else:
                 print("🎯 Training new improved emotion detection model...")
                 accuracy = self.detector.train_model()
-                self.detector.save_model(new_model_path)
+                self.detector.save_model(default_model_path)
                 self.model_loaded = True
                 print(f"✅ Improved model trained with accuracy: {accuracy:.3f}")
                 

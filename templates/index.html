@@ -524,26 +524,22 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Emotion icons mapping
+        // Emotion icons mapping - aligned with dataset classes
         const emotionIcons = {
-            'happy': '😊',
-            'sad': '😢',
-            'angry': '😠',
-            'fear': '😨',
-            'surprise': '😲',
-            'disgust': '🤢',
-            'neutral': '😐'
+            'Happy': '😊',
+            'Sad': '😢',
+            'Angry': '😠',
+            'Fear': '😨',
+            'Surprise': '😲'
         };
 
-        // Emotion colors mapping
+        // Emotion colors mapping - aligned with dataset classes
         const emotionColors = {
-            'happy': '#10b981',
-            'sad': '#6b7280',
-            'angry': '#ef4444',
-            'fear': '#8b5cf6',
-            'surprise': '#f59e0b',
-            'disgust': '#06b6d4',
-            'neutral': '#64748b'
+            'Happy': '#10b981',
+            'Sad': '#6b7280',
+            'Angry': '#ef4444',
+            'Fear': '#8b5cf6',
+            'Surprise': '#f59e0b'
         };
 
         // File upload form handling
@@ -762,9 +758,9 @@
             });
         }
 
-        // Generate emotion percentages
+        // Generate emotion percentages - aligned with dataset classes
         function generateEmotionPercentages(primaryEmotion, primaryConfidence) {
-            const emotions = ['happy', 'sad', 'angry', 'fear', 'surprise', 'disgust', 'neutral'];
+            const emotions = ['Happy', 'Sad', 'Angry', 'Fear', 'Surprise'];
             const percentages = {};
             
             const primaryPercentage = Math.round(primaryConfidence * 100);

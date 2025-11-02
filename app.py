@@ -24,7 +24,14 @@ import random
 import base64
 import io
 import time
+import logging
 from datetime import datetime
+
+# Configure logging for production
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s'
+)
 
 # Third-party imports
 from flask import Flask, render_template, request, jsonify
@@ -102,8 +109,8 @@ def predict_emotion(image_input=None):
             
             return emotion, confidence, message, all_emotions
         else:
-            # Fallback to random prediction
-            emotions = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+            # Fallback to random prediction - using dataset emotion classes
+            emotions = ['Happy', 'Surprise', 'Angry', 'Fear', 'Sad']
             emotion = random.choice(emotions)
             confidence = random.uniform(0.6, 0.95)
             message = f"Detected emotion: {emotion}"
@@ -114,8 +121,8 @@ def predict_emotion(image_input=None):
             return emotion, confidence, message, all_emotions
     except Exception as e:
         print(f"Prediction error: {e}")
-        # Final fallback
-        emotions = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+        # Final fallback - using dataset emotion classes
+        emotions = ['Happy', 'Surprise', 'Angry', 'Fear', 'Sad']
         emotion = random.choice(emotions)
         confidence = random.uniform(0.6, 0.95)
         message = "Fallback prediction - no file upload needed"
@@ -124,7 +131,7 @@ def predict_emotion(image_input=None):
 
 def generate_emotion_percentages(primary_emotion, primary_confidence):
     """Generate realistic percentages for all emotions"""
-    emotions = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+    emotions = ['Happy', 'Surprise', 'Angry', 'Fear', 'Sad']
     percentages = {}
     
     # Set primary emotion percentage
@@ -158,9 +165,41 @@ def generate_emotion_percentages(primary_emotion, primary_confidence):
 init_db()
 init_emotion_detector_global()
 
+# Ensure uploads directory exists
+os.makedirs('uploads', exist_ok=True)
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for deployment monitoring"""
+    try:
+        # Check database connection
+        conn = sqlite3.connect('emotion_detection.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
+        conn.close()
+        
+        # Check emotion detector
+        detector_status = EMOTION_DETECTOR is not None
+        
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'users': user_count,
+            'emotion_detector': 'loaded' if detector_status else 'not_loaded',
+            'timestamp': datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        logging.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -314,6 +353,6 @@ def process_live_image():
 if __name__ == '__main__':
     init_db()
     init_emotion_detector_global()
-    port = int(os.environ.get('PORT', 3000))  # Changed default port to 8000
+    port = int(os.environ.get('PORT', 3000))  # Standard Flask port for Heroku
     debug_mode = os.environ.get('FLASK_ENV') == 'development'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
